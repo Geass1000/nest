@@ -8,29 +8,16 @@ import {
   PATTERN_METADATA,
 } from './constants';
 import { PatternHandler } from './enums/pattern-handler.enum';
-import { ClientOptions } from './interfaces/client-metadata.interface';
-import { PatternMetadata } from './interfaces/pattern-metadata.interface';
-
-export interface ClientProperties {
-  property: string;
-  metadata: ClientOptions;
-}
-
-export interface PatternProperties {
-  pattern: PatternMetadata;
-  methodKey: string;
-  isEventHandler: boolean;
-  targetCallback: (...args: any[]) => any;
-}
+import * as MsInterfaces from './interfaces';
 
 export class ListenerMetadataExplorer {
   constructor(private readonly metadataScanner: MetadataScanner) {}
 
-  public explore(instance: Controller): PatternProperties[] {
+  public explore(instance: Controller): MsInterfaces.MethodDescription[] {
     const instancePrototype = Object.getPrototypeOf(instance);
     return this.metadataScanner.scanFromPrototype<
       Controller,
-      PatternProperties
+        MsInterfaces.MethodDescription
     >(instance, instancePrototype, method =>
       this.exploreMethodMetadata(instance, instancePrototype, method),
     );
@@ -40,7 +27,7 @@ export class ListenerMetadataExplorer {
     instance: object,
     instancePrototype: any,
     methodKey: string,
-  ): PatternProperties {
+  ): MsInterfaces.MethodDescription {
     const targetCallback = instancePrototype[methodKey];
     const handlerType = Reflect.getMetadata(
       PATTERN_HANDLER_METADATA,
@@ -60,7 +47,7 @@ export class ListenerMetadataExplorer {
 
   public *scanForClientHooks(
     instance: Controller,
-  ): IterableIterator<ClientProperties> {
+  ): IterableIterator<MsInterfaces.ClientProperties> {
     for (const propertyKey in instance) {
       if (isFunction(propertyKey)) {
         continue;
