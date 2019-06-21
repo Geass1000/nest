@@ -1,5 +1,5 @@
 import { Controller } from '@nestjs/common/interfaces/controllers/controller.interface';
-import { isFunction, isUndefined } from '@nestjs/common/utils/shared.utils';
+import { isFunction, isUndefined, isNil } from '@nestjs/common/utils/shared.utils';
 import { MetadataScanner } from '@nestjs/core/metadata-scanner';
 import {
   CLIENT_CONFIGURATION_METADATA,
@@ -16,11 +16,22 @@ export class ListenerMetadataExplorer {
   public explore(instance: Controller): MsInterfaces.MethodDescription[] {
     const instancePrototype = Object.getPrototypeOf(instance);
     return this.metadataScanner.scanFromPrototype<
-      Controller,
+        Controller,
         MsInterfaces.MethodDescription
-    >(instance, instancePrototype, method =>
-      this.exploreMethodMetadata(instance, instancePrototype, method),
-    );
+      >(instance, instancePrototype, method => {
+        const methodMetadata = this.exploreMethodMetadata(instance, instancePrototype, method);
+
+        if (isNil(methodMetadata)) {
+          return null;
+        }
+
+        const classMetadata = this.exploreClassMetadata(instancePrototype);
+
+        return {
+          ...methodMetadata,
+          pattern: { ...classMetadata.pattern, ...methodMetadata.pattern },
+        };
+      });
   }
 
   public exploreMethodMetadata(
@@ -29,19 +40,29 @@ export class ListenerMetadataExplorer {
     methodKey: string,
   ): MsInterfaces.MethodDescription {
     const targetCallback = instancePrototype[methodKey];
-    const handlerType = Reflect.getMetadata(
-      PATTERN_HANDLER_METADATA,
-      targetCallback,
-    );
+
+    const handlerType = Reflect.getMetadata(PATTERN_HANDLER_METADATA, targetCallback);
+
     if (isUndefined(handlerType)) {
-      return;
+      return null;
     }
+
     const pattern = Reflect.getMetadata(PATTERN_METADATA, targetCallback);
+
     return {
       methodKey,
       targetCallback,
       pattern,
       isEventHandler: handlerType === PatternHandler.EVENT,
+    };
+  }
+
+  public exploreClassMetadata(instancePrototype: any): MsInterfaces.ClassDescription {
+    const defPattern = ``;
+    const refPattern = Reflect.getMetadata(PATTERN_METADATA, instancePrototype.constructor);
+    const pattern = isUndefined(refPattern) ? defPattern : refPattern;
+    return {
+        pattern: { controller: pattern },
     };
   }
 
