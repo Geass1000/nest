@@ -57,12 +57,22 @@ export class ListenerMetadataExplorer {
     };
   }
 
+  /**
+   * Extracts pattern from a class decorator.
+   *
+   * @param  {any} instancePrototype - prototype of class
+   * @returns MsInterfaces.ClassDescription
+   */
   public exploreClassMetadata(instancePrototype: any): MsInterfaces.ClassDescription {
-    const defPattern = ``;
+    // Gets class pattern from Reflect-Metadata
     const refPattern = Reflect.getMetadata(PATTERN_METADATA, instancePrototype.constructor);
-    const pattern = isUndefined(refPattern) ? defPattern : refPattern;
+
+    // If class doesn't have a decorator, fn will set pattern to `null` value
+    // otherwise fn will set pattern to { controller: <pattern from decorator> }
+    const pattern = isNil(refPattern) ? null : { controller: refPattern };
+
     return {
-        pattern: { controller: pattern },
+        pattern,
     };
   }
 
